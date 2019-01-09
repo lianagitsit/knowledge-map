@@ -141,7 +141,7 @@
 </style>
 
 <body>
-  <a id="pause" href="javascript:toggle();">pause</a>
+  <!-- <a id="pause" href="javascript:toggle();">pause</a> -->
   <div id="timestamp"></div>
   <div id="winners"></div>
   <div id="legend"></div>
@@ -268,9 +268,15 @@
       { "name": "Yanal Wazaefi", "image": "https://pp.getguru.com/87a0333b938d431daa2fab380e37cf52.jpeg", "email": "ywazaefi@getguru.com", "x": 12, "y": 11 },
       { "name": "Yevgeniy Meyer", "image": "./images/yev.png", "email": "ymeyer@getguru.com", "x": 12, "y": 10 }
     ];
+
+    for (let x = 0; x < users.length; x++) {
+      users[x].x = x % 10;
+      users[x].y = Math.floor(x / 10);
+    }
+
     users.forEach(function (user) {
-      user.x = 80 + (width - 160) * (user.x - 1) / 15;
-      user.y = height - ((height - 140) * user.y / 10);
+      user.x = 80 + (width - 160) * (user.x - 1) / 15 + 200;
+      user.y = height - ((height - 140) * user.y / 10) - 200;
       user.nightOwl = [];
       user.earlyBird = [];
       user.hits = [];
@@ -463,9 +469,9 @@
     var frame = 0;
     var lastEventDeleted = 0;
     var lastEvent = 0;
-    var startTime = performance.now();
-    var timestampDisplay = document.getElementById("timestamp");
-    var winnersDisplay = document.getElementById("winners");
+    // var startTime = performance.now();
+    // var timestampDisplay = document.getElementById("timestamp");
+    // var winnersDisplay = document.getElementById("winners");
     var currentTime = new Date();
     var ONE_DAY = 86400000;
     var DOT_DURATION = ONE_DAY * 0.75; // 18 hours
