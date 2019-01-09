@@ -469,59 +469,7 @@
     var currentTime = new Date();
     var ONE_DAY = 86400000;
     var DOT_DURATION = ONE_DAY * 0.75; // 18 hours
-    function getWinners() {
-      var oneDayAgo = currentTime.getTime() - ONE_DAY;
-      var nightOwl, nightOwlCount = 0;
-      var earlyBird, earlyBirdCount = 0;
-      var bookworm, bookwormCount = 0;
-      var trendsetter, trendsetterCount = 0;
-      users.forEach(function (user) {
-        var count;
 
-        count = user.nightOwl.filter(t => t > oneDayAgo).length;
-        if (count > nightOwlCount) {
-          nightOwlCount = count;
-          nightOwl = user;
-        }
-        count = user.earlyBird.filter(t => t > oneDayAgo).length;
-        if (count > earlyBirdCount) {
-          earlyBirdCount = count;
-          earlyBird = user;
-        }
-        count = user.reads.filter(t => t > oneDayAgo).length;
-        if (count > bookwormCount) {
-          bookwormCount = count;
-          bookworm = user;
-        }
-        count = user.hits.filter(t => t > oneDayAgo).length;
-        if (count > trendsetterCount) {
-          trendsetterCount = count;
-          trendsetter = user;
-        }
-      });
-      // find the most popular card of the day.
-      var viral, viralCount = 1;
-      for (var id in cards) {
-        var card = cards[id];
-        var count = card.views.filter(t => t > oneDayAgo).length;
-        if (count > viralCount) {
-          viralCount = count;
-          viral = card;
-        }
-      }
-      return {
-        nightOwl: nightOwl,
-        nightOwlCount: nightOwlCount,
-        earlyBird: earlyBird,
-        earlyBirdCount: earlyBirdCount,
-        bookworm: bookworm,
-        bookwormCount: bookwormCount,
-        trendsetter: trendsetter,
-        trendsetterCount: trendsetterCount,
-        viral: viral,
-        viralCount: viralCount
-      };
-    }
     function toggle() {
       if (paused) {
         lastFrameTime = 0;
@@ -559,23 +507,6 @@
       if (currentTime.getHours() >= 3 && currentTime.getHours() < 6 && frame % 10 == 0) {
         context.fillStyle = "rgba(255, 255, 255, 0.25)";
         context.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      if (currentTime.getHours() == 4) {
-        if (currentTime.getMinutes() < 15) {
-          var winners = getWinners();
-
-          var html = "";
-          if (winners.viral) html += `<div class="award"><span>most popular</span><span>${winners.viral.author} <span>(${winners.viralCount} views: ${winners.viral.title.trim()})</span></span></div>`;
-          if (winners.nightOwl) html += `<div class="award"><span>most likely to have a late night cram session</span><span>${winners.nightOwl.name} <span>(${winners.nightOwlCount} cards viewed from 8pm - 4am)</span></span></div>`;
-          if (winners.earlyBird) html += `<div class="award"><span>eats Guru cards for breakfast</span><span>${winners.earlyBird.name} <span>(${winners.earlyBirdCount} cards viewed 4am - 8am)</span></span></div>`;
-          if (winners.bookworm) html += `<div class="award"><span>class valedictorian</span><span>${winners.bookworm.name} <span>(${winners.bookwormCount} cards viewed)</span></span></div>`;
-          if (winners.trendsetter) html += `<div class="award"><span>most fashionable</span><span>${winners.trendsetter.name} <span>(${winners.trendsetterCount} cards read by others)</span></span></div>`;
-          var beards = ["Yael McCue", "Matt Romans", "Rick Nucci"];
-          var bestBeard = beards[Math.floor(Math.random() * beards.length)];
-          var beardVotes = Math.floor(30 + Math.random() * 25);
-          html += `<div class="award"><span>best beard</span><span>${bestBeard} <span>(${beardVotes} votes)</span></span></div>`;
-          winnersDisplay.innerHTML = html;
-        }
       }
       context.fillStyle = "rgba(160, 160, 160, 0.02)";
       context.beginPath();
