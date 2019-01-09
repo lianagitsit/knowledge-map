@@ -149,7 +149,7 @@
   <script src="https://fastcdn.org/D3.js/3.5.6/d3.min.js"></script>
   <script src="events.js"></script>
   <script>
-    var pauseLink = document.querySelector("#pause");
+    // var pauseLink = document.querySelector("#pause");
     var canvas = document.querySelector("#canvas");
     var context = canvas.getContext("2d");
     context.fillStyle = "#fff";
@@ -275,8 +275,8 @@
     }
 
     users.forEach(function (user) {
-      user.x = 80 + (width - 160) * (user.x - 1) / 15 + 200;
-      user.y = height - ((height - 140) * user.y / 10) - 200;
+      user.x = 80 + (width - 160) * (user.x - 1) / 15 + 100;
+      user.y = height - ((height - 140) * user.y / 10) - 250;
       user.nightOwl = [];
       user.earlyBird = [];
       user.hits = [];
@@ -469,25 +469,25 @@
     var frame = 0;
     var lastEventDeleted = 0;
     var lastEvent = 0;
-    // var startTime = performance.now();
+    var startTime = performance.now();
     // var timestampDisplay = document.getElementById("timestamp");
     // var winnersDisplay = document.getElementById("winners");
     var currentTime = new Date();
     var ONE_DAY = 86400000;
     var DOT_DURATION = ONE_DAY * 0.75; // 18 hours
 
-    function toggle() {
-      if (paused) {
-        lastFrameTime = 0;
-        paused = false;
-        pauseLink.innerText = "pause";
-        pauseLink.className="pause-active";
-      } else {
-        paused = true;
-        pauseLink.innerText = "play";
-        pauseLink.className = "";
-      }
-    }
+    // function toggle() {
+    //   if (paused) {
+    //     lastFrameTime = 0;
+    //     paused = false;
+    //     pauseLink.innerText = "pause";
+    //     pauseLink.className="pause-active";
+    //   } else {
+    //     paused = true;
+    //     pauseLink.innerText = "play";
+    //     pauseLink.className = "";
+    //   }
+    // }
     var paused = false;
     var totalTimeElapsed = 0;
     var lastFrameTime = 0;
@@ -509,7 +509,7 @@
       totalTimeElapsed += performance.now() - lastFrameTime;
       lastFrameTime = performance.now();
       currentTime.setTime(totalTimeElapsed * 1440 + events[0].timestamp);
-      timestampDisplay.innerText = formatTimestamp(currentTime);
+      // timestampDisplay.innerText = formatTimestamp(currentTime);
       if (currentTime.getHours() >= 3 && currentTime.getHours() < 6 && frame % 10 == 0) {
         context.fillStyle = "rgba(255, 255, 255, 0.25)";
         context.fillRect(0, 0, canvas.width, canvas.height);
