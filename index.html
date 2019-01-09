@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  rect {
+    fill: white;
+  }
+
+  circle {
+    stroke: #000;
+    stroke-opacity: .333;
+  }
+
+  body {
+    align-items: center;
+    display: flex;
+    font-family: "HelveticaNeue-Light";
+  }
+
+  body>svg {
+    z-index: 2;
+  }
+
+  #timestamp {
+    z-index: 2;
+    position: fixed;
+    left: 110px;
+    bottom: 30px;
+    font-family: monaco, Consolas, monospace;
+    font-size: 24px;
+    color: #aaa;
+  }
+
+  #pause {
+    z-index: 4;
+    position: fixed;
+    left: 30px;
+    bottom: 32px;
+    font-family: "HelveticaNeue-Light";
+    font-size: 20px;
+    color: white;
+    border-radius: 5px;
+    padding: 2px 10px;
+    background:#009688;
+    text-decoration: none;
+    width: 50px;
+    text-align: center;
+    margin-right: 5px;
+  }
+
+
+  #pause.pause-active {
+    background: orange;
+  }
+
+  #winners {
+    color: #000;
+    font-size: 24px;
+    position: fixed;
+    top: 320px;
+    left: 30px;
+    z-index: 3;
+  }
+
+  #winners .award {
+    margin-bottom: 15px;
+    color: #333;
+  }
+
+  #winners span:first-child {
+    margin-right: 10px;
+    font-size: 20px;
+  }
+
+  #winners span+span {
+    color: #005dff;
+    font-size: 28px;
+    display: block;
+  }
+
+  #winners span>span {
+    font-size: 20px;
+
+  }
+
+  canvas {
+    position: absolute;
+  }
+
+  .name {
+    pointer-events: none;
+    text-align: center;
+    width: 100px;
+    font-size: 10px;
+    padding-top: 40px;
+    color: rgba(0, 0, 0, 0.7);
+    z-index: 3;
+  }
+
+  .profile-pic {
+    width: 48px;
+    height: 48px;
+    border-radius: 48px;
+    overflow: hidden;
+    opacity: 0.4;
+    box-shadow: rgba(0, 0, 0, 0.4) 0 2px 8px;
+    border: 2px solid #fff;
+    z-index: 1;
+  }
+
+  #legend {
+    position: fixed;
+    z-index: 4;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+
+  #legend>div {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 5px 10px;
+    color: #fff;
+  }
+
+  #legend>div+div {
+    margin-left: 5px;
+  }
+
+  div.tooltip {
+    position: absolute;
+    padding: 4px 6px;
+    font: 12px sans-serif;
+    border: 0px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 6;
+    color: #fff;
+  }
+</style>
+
+<body>
+  <a id="pause" href="javascript:toggle();">pause</a>
+  <div id="timestamp"></div>
+  <div id="winners"></div>
+  <div id="legend"></div>
+  <canvas id="canvas" width="1650" height="900"></canvas>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="events.js"></script>
+  <script>
+    var pauseLink = document.querySelector("#pause");
+    var canvas = document.querySelector("#canvas");
+    var context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    var width = canvas.width,
+      height = canvas.height;
+    var collectionsToColors = {
+      "Account Management": "#00bcd4",
+      "Backyard Farming": "#FF8A65",
+      "Customer Success": "#009688",
+      "Data Science": "#689f38",
+      "Deal Desk": "#2962FF",
+      "Design": "#c2185b",
+      "Dev Ops": "#ff9800",
+      "Engineering": "#2196f3",
+      "Finance": "#689f38",
+      "Help Center": "#f44336",
+      "Insights": "#FF8A65",
+      "Marketing": "#303F9F",
+      "Partner Success": "#f44336",
+      "Random": "#ffc107",
+      "Resource Center": "#303f9f",
+      "Sales": "#e040fb",
+      "Sales Intelligence": "#2962FF",
+      "Security Policies": "#f44336",
+      "The Guru Guide": "#e040fb",
+      "Tribe": "#2962FF"
+    };
+    for (var i = 0; i < tribeEvents.length; i++) {
+      if (!collectionsToColors[tribeEvents[i].collection_name]) {
+        console.log(tribeEvents[i]);
+      }
+    }
+    var legendHtml = "";
+    for (var name in collectionsToColors) {
+      if (/guru\sguide|deal\sdesk|insights/i.test(name)) continue;
+      var color = collectionsToColors[name];
+      legendHtml += `<div style="background-color: ${color}">${name}</div>`;
+    }
+    document.getElementById("legend").innerHTML = legendHtml;
+    var users = [
+      { "name": "Alan Jacobson", "image": "https://lh6.googleusercontent.com/-VY4DYtDFhdg/AAAAAAAAAAI/AAAAAAAAAAs/ku9byEUaCZE/photo.jpg?sz=24", "email": "ajacobson@getguru.com", "x": 15, "y": 1 },
+      { "name": "Andrea DeSabato", "image": "./images/andrea.png", "email": "adesabato@getguru.com", "x": 15, "y": 2 },
+      { "name": "Anna Rubin", "image": "./images/anna-rubin.png", "email": "arubin@getguru.com", "x": 15, "y": 7 },
+      { "name": "Armard Bellamy", "image": "./images/armard.png", "email": "abellamy@getguru.com", "x": 11, "y": 10 },
+      { "name": "Bobby Lundquist", "image": "https://pp.getguru.com/764787431e884828aa663cc346062909.jpeg", "email": "rlundquist@getguru.com", "x": 2, "y": 9 },
+      { "name": "Chelsea Cox", "image": "./images/chelsea.png", "email": "ccox@getguru.com", "x": 2, "y": 10 },
+      { "name": "Chris Anderson", "image": "https://lh4.googleusercontent.com/-M5eiC2ZMsgE/AAAAAAAAAAI/AAAAAAAAABE/4lRs3o-M-qM/photo.jpg?sz=24", "email": "canderson@getguru.com", "x": 14, "y": 8 },
+      { "name": "Chris Sciolla", "image": "./images/chris-sciolla.png", "email": "csciolla@getguru.com", "x": 3, "y": 11 },
+      { "name": "Christine Richardson", "image": "./images/christine.png", "email": "crichardson@getguru.com", "x": 4, "y": 11 },
+      { "name": "Cody Casey", "image": "https://pp.getguru.com/70c0469f4f7c4349b4ed34f7617bc10e.jpeg", "email": "ccasey@getguru.com", "x": 6, "y": 10 },
+      { "name": "Cole Sherin", "image": "https://pp.getguru.com/9c8fee93fb754f138e33df5c55ff3d84.jpeg", "email": "csherin@getguru.com", "x": 16, "y": 5 },
+      { "name": "Collin Utterback", "image": "./images/colin-utterback.png", "email": "cutterback@getguru.com", "x": 16, "y": 7 },
+      { "name": "Corey Duzy", "image": "./images/corey-d.png", "email": "cduzy@getguru.com", "x": 15, "y": 5 },
+      { "name": "Dalton Gilgor", "image": "./images/dalton.png", "email": "dgilgor@getguru.com", "x": 15, "y": 4 },
+      { "name": "Diane Ruth", "image": "https://lh3.googleusercontent.com/-qSJXu_Jp2XU/AAAAAAAAAAI/AAAAAAAAABU/SuQNfikRv9Q/photo.jpg?sz=24", "email": "druth@getguru.com", "x": 15, "y": 10 },
+      { "name": "Dustin Shubert", "image": "./images/dustin-shubert.png", "email": "dshubert@getguru.com", "x": 14, "y": 7 },
+      { "name": "Dylan Weaknecht", "image": "./images/dylan.png", "email": "dweaknecht@getguru.com", "x": 14, "y": 6 },
+      { "name": "Eli Panken", "image": "https://pp.getguru.com/2d73d2a8c3b14dc1875cd6122f4492cc.jpeg", "email": "epanken@getguru.com", "x": 14, "y": 11 },
+      { "name": "Graham Power", "image": "https://pp.getguru.com/40b44483713a47ccbb4b8b0f23fdb96c.jpeg", "email": "gpower@getguru.com", "x": 14, "y": 2 },
+      { "sf": true, "name": "Greg Fargo", "image": "./images/greg-fargo.png", "email": "gfargo@getguru.com", "x": 11, "y": 4 },
+      { "name": "Greg Kristofor", "image": "./images/greg-krist.png", "email": "gkristofor@getguru.com", "x": 15, "y": 3 },
+      { "sf": true, "name": "Halid Ibrahimovic", "image": "./images/halid.png", "email": "hibrahimovic@getguru.com", "x": 10, "y": 4 },
+      { "name": "Hillary Curran", "image": "https://pp.getguru.com/64b6a601fe3444b9b9d3f570312ba1ee.jpeg", "email": "hcurran@getguru.com", "x": 15, "y": 9 },
+      { "name": "Ivana Veliskova", "image": "./images/ivana.png", "email": "iveliskova@getguru.com", "x": 7, "y": 10 },
+      { "name": "Jake Sauer", "image": "./images/jake-saur.png", "email": "jsauer@getguru.com", "x": 5, "y": 11 },
+      { "sf": true, "name": "Jenna Griffin", "image": "./images/jenna.png", "email": "jgriffin@getguru.com", "x": 9, "y": 4 },
+      { "name": "Jess Lantis", "image": "https://pp.getguru.com/4c62be9d77704c3a8bde4a662e3f4788.jpeg", "email": "jlantis@getguru.com", "x": 1, "y": 9 },
+      { "name": "JJ Ferroni", "image": "https://lh5.googleusercontent.com/-HMfyuxLvrDk/AAAAAAAAAAI/AAAAAAAAACY/A9jmfWIJzOw/photo.jpg?sz=24", "email": "jferroni@getguru.com", "x": 15, "y": 11 },
+      { "name": "Jon Billett", "image": "https://pp.getguru.com/448091f60ea647f1a0bb66e4eb534e3d.jpeg", "email": "jbillett@getguru.com", "x": 5, "y": 9 },
+      { "sf": true, "name": "Julia Bersin", "image": "./images/julia-bersin.png", "email": "jbersin@getguru.com", "x": 11, "y": 3 },
+      { "name": "June Zhang", "image": "https://lh6.googleusercontent.com/-xu8xlfv4M7E/AAAAAAAAAAI/AAAAAAAAAA4/s3Q4zKb_YNA/photo.jpg?sz=24", "email": "jzhang@getguru.com", "x": 14, "y": 9 },
+      { "name": "Karl Girthofer", "image": "https://lh4.googleusercontent.com/-n-bEJ3nNUr4/AAAAAAAAAAI/AAAAAAAAAAc/JZx8n6xTatM/photo.jpg?sz=24", "email": "kgirthofer@getguru.com", "x": 11, "y": 9 },
+      { "name": "Liana Mancini", "image": "https://pp.getguru.com/7d8841de137f49d3a3156dee5e2978ff.jpeg", "email": "lmancini@getguru.com", "x": 8, "y": 10 },
+      { "name": "Lisa MacCarrigan", "image": "./images/lisa.png", "email": "lmaccarrigan@getguru.com", "x": 9, "y": 9 },
+      { "name": "Madeleine FitzGerald", "image": "./images/madeleine.png", "email": "mfitzgerald@getguru.com", "x": 16, "y": 9 },
+      { "name": "Mansi Pathak", "image": "./images/mansi.png", "email": "mpathak@getguru.com", "x": 8, "y": 9 },
+      { "name": "Matt Garren", "image": "https://lh6.googleusercontent.com/-sEbqH1B3WCw/AAAAAAAAAAI/AAAAAAAAAAA/AB6qoq2oSE8NhW9UWRwjNfUCApUcBv3kmw/mo/photo.jpg?sz=24", "email": "mgarren@getguru.com", "x": 16, "y": 6 },
+      { "name": "Matt Romans", "image": "https://lh3.googleusercontent.com/-pGYcTKl_LJw/AAAAAAAAAAI/AAAAAAAAAA4/x-Q3tbaXHsc/photo.jpg?sz=24", "email": "mromans@getguru.com", "x": 13, "y": 11 },
+      { "name": "Matt Sheaffer", "image": "./images/matt-shaeffer.png", "email": "msheaffer@getguru.com", "x": 9, "y": 10 },
+      { "name": "Meg McGrath", "image": "https://lh6.googleusercontent.com/-nIWRgY2531o/AAAAAAAAAAI/AAAAAAAAAAA/MAlXoUBeIBc/photo.jpg?sz=24", "email": "mmcgrath@getguru.com", "x": 14, "y": 10 },
+      { "name": "Michelle Ferrara", "image": "./images/michelle.png", "email": "mferrara@getguru.com", "x": 16, "y": 2 },
+      { "name": "Min Lee", "image": "./images/min.png", "email": "mlee@getguru.com", "x": 8, "y": 11 },
+      { "name": "Mina Shakarshy", "image": "./images/mina.png", "email": "mshakarshy@getguru.com", "x": 5, "y": 10 },
+      { "name": "Mitch Stewart", "image": "https://pp.getguru.com/b5271ae599ce4a399f727dc665901069.jpeg", "email": "mstewart@getguru.com", "x": 1, "y": 10 },
+      { "name": "Morgan Touey", "image": "./images/morgan.png", "email": "mtouey@getguru.com", "x": 15, "y": 8 },
+      { "name": "Nicolas Schillagi", "image": "./images/nico.png", "email": "nschillagi@getguru.com", "x": 16, "y": 8 },
+      { "name": "Nora West", "image": "./images/nora.png", "email": "nwest@getguru.com", "x": 2, "y": 11 },
+      { "name": "Pete Michel", "image": "https://pp.getguru.com/236618244fd9452684a4260757adcae6.jpeg", "email": "pmichel@getguru.com", "x": 11, "y": 11 },
+      { "name": "Priya Ranganath", "image": "https://lh4.googleusercontent.com/-ykIAuPhG-K4/AAAAAAAAAAI/AAAAAAAAAAs/WC2sO5e7s0o/photo.jpg?sz=24", "email": "pranganath@getguru.com", "x": 13, "y": 9 },
+      { "name": "Ryan Yurkanin", "image": "./images/ryan-y.png", "email": "ryurkanin@getguru.com", "x": 6, "y": 11 },
+      { "name": "Rachel Robbins", "image": "https://pp.getguru.com/e1d9fbe6957e464fbd12a08530863504.jpeg", "email": "rrobbins@getguru.com", "x": 13, "y": 10 },
+      { "sf": true, "name": "Rachel Taylor", "image": "https://pp.getguru.com/1a63a91135554b9a8fea47f9d1e4f1ad.jpeg", "email": "rtaylor@getguru.com", "x": 10, "y": 3 },
+      { "name": "Ramanjit Khakh", "image": "./images/raman.png", "email": "rkhakh@getguru.com", "x": 6, "y": 9 },
+      { "sf": true, "name": "Rebecca Dierolf", "image": "./images/rebecca.png", "email": "rdierolf@getguru.com", "x": 9, "y": 3 },
+      { "name": "Richard Foreman", "image": "./images/richard.png", "email": "rforeman@getguru.com", "x": 16, "y": 1 },
+      { "name": "Rick Nucci", "image": "https://lh5.googleusercontent.com/-467P4DZCa9w/AAAAAAAAAAI/AAAAAAAAACM/uXAM6Zg7TEE/photo.jpg?sz=24", "email": "rnucci@getguru.com", "x": 1, "y": 11 },
+      { "name": "Rob Miller", "image": "https://www.gravatar.com/avatar/e08ed99f7f30823a2c21e78660d85e80.jpg?s=128&d=identicon", "email": "rmiller@getguru.com", "x": 7, "y": 11 },
+      { "name": "Ryan Harris", "image": "./images/ryan-h.png", "email": "rharris@getguru.com", "x": 7, "y": 9 },
+      { "name": "Ryan McConnell", "image": "./images/ryan-m.png", "email": "rmcconnell@getguru.com", "x": 15, "y": 6 },
+      { "sf": true, "name": "Sanjayan Manivannan", "image": "./images/sunny.png", "email": "smanivannan@getguru.com", "x": 9, "y": 2 },
+      { "name": "Sarah Hatter", "image": "./images/sarah-h.png", "email": "shatter@getguru.com", "x": 4, "y": 9 },
+      { "name": "Sarah Noderer", "image": "./images/sarah.png", "email": "snoderer@getguru.com", "x": 16, "y": 10 },
+      { "name": "Shane Yelicanin", "image": "https://pp.getguru.com/a7061fb3bac74715ae82d3e3ad28304d.jpeg", "email": "syelicanin@getguru.com", "x": 3, "y": 10 },
+      { "name": "Stephen Perpiglia", "image": "./images/stephen-p.png", "email": "sperpiglia@getguru.com", "x": 14, "y": 5 },
+      { "name": "Steve Mayernick", "image": "https://pp.getguru.com/0e46e50b82fe4ec39e2082fa44b98012.jpeg", "email": "smayernick@getguru.com", "x": 3, "y": 9 },
+      { "name": "Terry Li", "image": "./images/terry-li.png", "email": "Tli@getguru.com", "x": 14, "y": 1 },
+      { "sf": true, "name": "Tom Wraith", "image": "./images/tom-wraith.png", "email": "twraith@getguru.com", "x": 11, "y": 1 },
+      { "name": "Trina Jones", "image": "./images/trina.png", "email": "tjones@getguru.com", "x": 16, "y": 3 },
+      { "sf": true, "name": "Wes Andrues", "image": "./images/wes-andrues.png", "email": "wandrues@getguru.com", "x": 10, "y": 2 },
+      { "sf": true, "name": "Wes Manning", "image": "./images/wes-manning.png", "email": "wmanning@getguru.com", "x": 9, "y": 1 },
+      { "sf": true, "name": "Wes Yee", "image": "https://lh6.googleusercontent.com/-Rc1NR0i6H8k/AAAAAAAAAAI/AAAAAAAAAAc/k2NEUM0Ou_U/photo.jpg?sz=24", "email": "wyee@getguru.com", "x": 10, "y": 1 },
+      { "name": "Will Waggenspack", "image": "./images/wil.png", "email": "wwaggenspack@getguru.com", "x": 16, "y": 11 },
+      { "name": "Xinyue Wang", "image": "./images/xinyue.png", "email": "xwang@getguru.com", "x": 10, "y": 11 },
+      { "sf": true, "name": "Yael McCue", "image": "https://pp.getguru.com/95a0f78ecbc74b7db5ffc82937c4bacb.jpeg", "email": "ymccue@getguru.com", "x": 11, "y": 2 },
+      { "name": "Yanal Wazaefi", "image": "https://pp.getguru.com/87a0333b938d431daa2fab380e37cf52.jpeg", "email": "ywazaefi@getguru.com", "x": 12, "y": 11 },
+      { "name": "Yevgeniy Meyer", "image": "./images/yev.png", "email": "ymeyer@getguru.com", "x": 12, "y": 10 }
+    ];
+    users.forEach(function (user) {
+      user.x = 80 + (width - 160) * (user.x - 1) / 15;
+      user.y = height - ((height - 140) * user.y / 10);
+      user.nightOwl = [];
+      user.earlyBird = [];
+      user.hits = [];
+      user.reads = [];
+    });
+    var nodes = d3.range(users.length).map(function (i) {
+      return {
+        radius: 0,
+        fixed: true,
+        type: i,
+        x: users[i].x,
+        y: users[i].y,
+        image: users[i].image
+      };
+    });
+    var color = d3.scale.category10();
+    var force = d3.layout.force()
+      .gravity(0)
+      .charge(0)
+      .nodes(nodes)
+      .size([width, height])
+      .on("tick", ticked);
+    var svg = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+    svg.selectAll("circle")
+      .data(nodes);
+    users.forEach(function (user) {
+      var div = document.createElement("div");
+      document.body.appendChild(div);
+      div.className = "name";
+      div.style.position = "absolute";
+      div.style.left = (user.x - 40) + "px";
+      div.style.top = user.y + "px";
+      div.innerText = user.name;
+      var image = document.createElement("div");
+      document.body.appendChild(image);
+      image.className = "profile-pic";
+      image.style.position = "absolute";
+      image.style.left = (user.x - 16) + "px";
+      image.style.top = (user.y - 16) + "px";
+      image.style.background = `url(${user.image})`;
+      image.style.backgroundSize = "100% auto";
+      image.style.backgroundPosition = "50% 50%";
+    })
+    // tribeEvents = tribeEvents.slice(0, 10);
+    // tribeEvents = tribeEvents.slice(6800);
+    var events = tribeEvents;
+    // convert emails addresses to indexes in the users list.
+    for (var i = 0; i < events.length; i++) {
+      var event = events[i];
+      event.from = users.findIndex(function (user) {
+        return user.email == event.from;
+      });
+      event.to = users.findIndex(function (user) {
+        return user.email == event.to;
+      });
+      event.timestamp *= 1000
+      event.date = new Date(event.timestamp);
+    }
+    var dateParam = location.href.includes("date=") ? /date=(.*)/.exec(location.href)[1] : "";
+    if (dateParam) {
+      var cutoff = new Date(dateParam + " 06:00:00 EDT").getTime();
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].timestamp >= cutoff) {
+          events = events.slice(i);
+          break;
+        }
+      }
+    }
+    force.start();
+    function removeNode(nodes, node) {
+      var index = nodes.indexOf(node);
+      if (index >= 0) {
+        nodes.splice(index, 1);
+      }
+    }
+    function getAngle(a, b) {
+      return Math.atan2(b.y - a.y, b.x - a.x);
+    }
+    var randomValues = {};
+    function getRandomValue(a, b) {
+      var key = a + "__" + b;
+      if (key in randomValues) {
+        return randomValues[key];
+      } else {
+        return randomValues[key] = Math.random();
+      }
+    }
+    // make the node that goes from the author to the viewer.
+    function makeViewerDot(event) {
+      var node = event.node = {
+        radius: 7,
+        type: event.to
+      };
+      var target = users[event.to];
+      var user = users[event.from];
+      node.x = user.x + Math.random() * 10 - 5;
+      node.y = user.y + Math.random() * 10 - 5;
+
+      var dx = target.x - user.x;
+      var dy = target.y - user.y;
+      var length = Math.sqrt(dx * dx + dy * dy);
+      // node.px = user.x - dx / length * 2;
+      // node.py = user.y - dy / length * 2;
+      var angle = getAngle(user, target) + getRandomValue(event.from, event.to) - 0.5;
+      node.px = node.x + Math.cos(angle) * Math.sqrt(length / 20);
+      node.py = node.y + Math.sin(angle) * Math.sqrt(length / 20);
+      node.trail = true;
+      var div = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+      event.svg = svg.append("circle")
+        .data([node])
+        .attr("card_id", event.card_id)
+        .attr("cx", function (d) { return d.x; })
+        .attr("cy", function (d) { return d.y; })
+        .attr("r", function (d) { return d.radius - 2; })
+        .style("fill", function (d) { return collectionsToColors[event.collection_name]; })
+        .on("mouseover", function (d) {
+          div.transition()
+            .duration(200)
+            .style("opacity", .9);
+          div.html(`<strong>${event.title}</strong><br/>by ${event.from_name}<br/>viewed by ${event.to_name}`)
+            .style("left", (d3.event.pageX + 10) + "px")
+            .style("background", collectionsToColors[event.collection_name])
+            .style("top", (d3.event.pageY - 10) + "px");
+        })
+        .on("mouseout", function (d) {
+          div.transition()
+            .duration(500)
+            .style("opacity", 0);
+        });
+
+      nodes.push(node);
+    }
+    // this updates the position of each dot to make them move towards their target.
+    function ticked(e) {
+      if (paused) return;
+      var q = d3.geom.quadtree(nodes),
+        k = e.alpha * 0.1,
+        i = 0,
+        n = nodes.length,
+        o;
+      while (++i < n) {
+        o = nodes[i];
+        if (o.fixed) continue;
+        c = nodes[o.type];
+        var dx = o.dx = c.x - o.x;
+        var dy = o.dy = c.y - o.y;
+        var length = Math.sqrt(dx * dx + dy * dy);
+        // o.x += (c.x - o.x) * k;
+        // o.y += (c.y - o.y) * k;
+        o.x += dx / length * e.alpha * 10.0;
+        o.y += dy / length * e.alpha * 10.0;
+        if (length < 30) {
+          o.trail = false;
+        }
+        q.visit(collide(o));
+      }
+      svg.selectAll("circle")
+        .attr("cx", function (d) { return d.x; })
+        .attr("cy", function (d) { return d.y; });
+    }
+    function collide(node) {
+      var r = node.radius + 16,
+        nx1 = node.x - r,
+        nx2 = node.x + r,
+        ny1 = node.y - r,
+        ny2 = node.y + r;
+      return function (quad, x1, y1, x2, y2) {
+        if (quad.point && node.type != quad.point.type) return;
+        if (quad.point && (quad.point !== node)) {
+          var x = node.x - quad.point.x,
+            y = node.y - quad.point.y,
+            l = Math.sqrt(x * x + y * y),
+            r = node.radius + quad.point.radius;
+          if (l < r) {
+            l = (l - r) / l * 0.2;
+            node.px += x * l;
+            node.py += y * l;
+          }
+        }
+        return x1 > nx2
+          || x2 < nx1
+          || y1 > ny2
+          || y2 < ny1;
+      };
+    }
+    var frame = 0;
+    var lastEventDeleted = 0;
+    var lastEvent = 0;
+    var startTime = performance.now();
+    var timestampDisplay = document.getElementById("timestamp");
+    var winnersDisplay = document.getElementById("winners");
+    var currentTime = new Date();
+    var ONE_DAY = 86400000;
+    var DOT_DURATION = ONE_DAY * 0.75; // 18 hours
+    function getWinners() {
+      var oneDayAgo = currentTime.getTime() - ONE_DAY;
+      var nightOwl, nightOwlCount = 0;
+      var earlyBird, earlyBirdCount = 0;
+      var bookworm, bookwormCount = 0;
+      var trendsetter, trendsetterCount = 0;
+      users.forEach(function (user) {
+        var count;
+
+        count = user.nightOwl.filter(t => t > oneDayAgo).length;
+        if (count > nightOwlCount) {
+          nightOwlCount = count;
+          nightOwl = user;
+        }
+        count = user.earlyBird.filter(t => t > oneDayAgo).length;
+        if (count > earlyBirdCount) {
+          earlyBirdCount = count;
+          earlyBird = user;
+        }
+        count = user.reads.filter(t => t > oneDayAgo).length;
+        if (count > bookwormCount) {
+          bookwormCount = count;
+          bookworm = user;
+        }
+        count = user.hits.filter(t => t > oneDayAgo).length;
+        if (count > trendsetterCount) {
+          trendsetterCount = count;
+          trendsetter = user;
+        }
+      });
+      // find the most popular card of the day.
+      var viral, viralCount = 1;
+      for (var id in cards) {
+        var card = cards[id];
+        var count = card.views.filter(t => t > oneDayAgo).length;
+        if (count > viralCount) {
+          viralCount = count;
+          viral = card;
+        }
+      }
+      return {
+        nightOwl: nightOwl,
+        nightOwlCount: nightOwlCount,
+        earlyBird: earlyBird,
+        earlyBirdCount: earlyBirdCount,
+        bookworm: bookworm,
+        bookwormCount: bookwormCount,
+        trendsetter: trendsetter,
+        trendsetterCount: trendsetterCount,
+        viral: viral,
+        viralCount: viralCount
+      };
+    }
+    function toggle() {
+      if (paused) {
+        lastFrameTime = 0;
+        paused = false;
+        pauseLink.innerText = "pause";
+        pauseLink.className="pause-active";
+      } else {
+        paused = true;
+        pauseLink.innerText = "play";
+        pauseLink.className = "";
+      }
+    }
+    var paused = false;
+    var totalTimeElapsed = 0;
+    var lastFrameTime = 0;
+    function formatTimestamp(date) {
+      var hour = date.getHours();
+      var minutes = date.getMinutes();
+      var ampm = hour < 12 ? "am" : "pm";
+      hour = hour > 12 ? hour - 12 : hour == 0 ? 12 : hour;
+      hour = hour < 10 ? "0" + hour : hour;
+      minutes = minutes < 10 ? "0" + minutes : minutes;
+      return `${date.toString().substring(0, 16)}${hour}:${minutes} ${ampm} EST`;
+    }
+    setInterval(function () {
+      if (paused) return;
+      if (!lastFrameTime) {
+        lastFrameTime = performance.now();
+      }
+      frame += 1;
+      totalTimeElapsed += performance.now() - lastFrameTime;
+      lastFrameTime = performance.now();
+      currentTime.setTime(totalTimeElapsed * 1440 + events[0].timestamp);
+      timestampDisplay.innerText = formatTimestamp(currentTime);
+      if (currentTime.getHours() >= 3 && currentTime.getHours() < 6 && frame % 10 == 0) {
+        context.fillStyle = "rgba(255, 255, 255, 0.25)";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      if (currentTime.getHours() == 4) {
+        if (currentTime.getMinutes() < 15) {
+          var winners = getWinners();
+
+          var html = "";
+          if (winners.viral) html += `<div class="award"><span>most popular</span><span>${winners.viral.author} <span>(${winners.viralCount} views: ${winners.viral.title.trim()})</span></span></div>`;
+          if (winners.nightOwl) html += `<div class="award"><span>most likely to have a late night cram session</span><span>${winners.nightOwl.name} <span>(${winners.nightOwlCount} cards viewed from 8pm - 4am)</span></span></div>`;
+          if (winners.earlyBird) html += `<div class="award"><span>eats Guru cards for breakfast</span><span>${winners.earlyBird.name} <span>(${winners.earlyBirdCount} cards viewed 4am - 8am)</span></span></div>`;
+          if (winners.bookworm) html += `<div class="award"><span>class valedictorian</span><span>${winners.bookworm.name} <span>(${winners.bookwormCount} cards viewed)</span></span></div>`;
+          if (winners.trendsetter) html += `<div class="award"><span>most fashionable</span><span>${winners.trendsetter.name} <span>(${winners.trendsetterCount} cards read by others)</span></span></div>`;
+          var beards = ["Yael McCue", "Matt Romans", "Rick Nucci"];
+          var bestBeard = beards[Math.floor(Math.random() * beards.length)];
+          var beardVotes = Math.floor(30 + Math.random() * 25);
+          html += `<div class="award"><span>best beard</span><span>${bestBeard} <span>(${beardVotes} votes)</span></span></div>`;
+          winnersDisplay.innerHTML = html;
+        }
+      }
+      context.fillStyle = "rgba(160, 160, 160, 0.02)";
+      context.beginPath();
+      // look for events that it's time for them to fire.
+      for (var i = 0; i < events.length; i++) {
+        var event = events[i];
+        if (event.fired && !event.deleted && currentTime.getTime() < event.timestamp + DOT_DURATION * 0.3) {
+          if (event.node.trail) {
+            context.moveTo(event.node.x, event.node.y);
+            context.arc(event.node.x, event.node.y, 4, 0, Math.PI * 2);
+          }
+        }
+        if (event.fired) continue;
+        if (currentTime.getTime() > event.timestamp) {
+          lastEvent = i + 1;
+          event.fired = true;
+          makeViewerDot(event);
+          // keep track of this event.
+          var card = cards[event.card_id];
+          var viewer = users[event.to];
+          var author = users[event.from];
+          var hour = event.date.getHours();
+          if (viewer.sf) {
+            if (hour >= 7 && hour < 11) {
+              viewer.earlyBird.push(event.timestamp);
+            } else if (hour >= 23 || hour < 7) {
+              viewer.nightOwl.push(event.timestamp);
+            }
+          } else {
+            if (hour >= 4 && hour < 8) {
+              viewer.earlyBird.push(event.timestamp);
+            } else if (hour >= 20 || hour < 4) {
+              viewer.nightOwl.push(event.timestamp);
+            }
+          }
+
+          card.views.push(event.timestamp);
+          viewer.reads.push(event.timestamp);
+          author.hits.push(event.timestamp);
+        } else {
+          break;
+        }
+      }
+      context.fill();
+      // look for events that are a day old and should have their circles deleted.
+      for (var i = lastEventDeleted; i < events.length; i++) {
+        if (currentTime.getTime() > events[i].timestamp + DOT_DURATION) {
+          let event = events[i];
+          lastEventDeleted = i + 1;
+          event.deleted = true;
+          event.svg.transition()
+            .attr("r", 1e-6)
+            .each("end", function () { removeNode(nodes, event.node); })
+            .remove();
+        } else {
+          break;
+        }
+      }
+      force.resume();
+    }, 1);
+  </script>
